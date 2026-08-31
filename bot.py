@@ -26,7 +26,7 @@ def save_data(file_path, data):
     with open(file_path, "w") as f:
         json.dump(data, f)
 
-# دروستکرنا لستا زەبەلاح و پێشکەفتی یا 5000 ڕاپۆرتان
+# دروستکرنا لستا زەبەلاح و پێشکەفتی یا 1285 ڕاپۆرتێن بۆتی
 MASSIVE_REPORT_TYPES = {
     "rep_1": ("🚨 سپام و بڵاڤکرنا ڤیدیۆکێن بێ مانا", "🚨"),
     "rep_2": ("🔞 ناڤەرۆکا نەشیاو و پۆلێن 18+", "🔞"),
@@ -50,19 +50,19 @@ MASSIVE_REPORT_TYPES = {
     "rep_20": ("📥 دانانا باکدۆر و ترۆجانێن کۆنترۆلا تەواو", "📥"),
 }
 
-for i in range(21, 5001):
+for i in range(21, 1286):
     if i % 4 == 0:
-        emoji = "🔓"
-        title = f"هێرشا هاککرن و دزینا کەناڵێ ژمارە {i}"
+        emoji = "⚡"
+        title = f"هێرشا پله‌ بلند و کۆنترۆلا توند ژمارە {i}"
     elif i % 4 == 1:
-        emoji = "💻"
-        title = f"سایبەر هێرش و پێشێلکارییا دیجیتالی ژمارە {i}"
+        emoji = "🔥"
+        title = f"سیستەمێ ئەکسپلویت و شکانترا سکیورتی ژمارە {i}"
     elif i % 4 == 2:
-        emoji = "🚨"
-        title = f"شکاندنا ڕێنماییێن تەلەگرام ژمارە {i}"
+        emoji = "💎"
+        title = f"ڕاپۆرتا تایبەت و هێرشا سایبەری ژمارە {i}"
     else:
-        emoji = "⚠️"
-        title = f"چاڵاکیا مەترسیدار و سکیورتی ژمارە {i}"
+        emoji = "🚀"
+        title = f"ئامرازێ قەوی یێ ڕاپۆرت و سزای ژمارە {i}"
     MASSIVE_REPORT_TYPES[f"rep_{i}"] = (title, emoji)
 
 
@@ -90,7 +90,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🎁 وەرگرتنا 5 کلیلێن بەلاش", callback_data="claim_gift")],
         [
-            InlineKeyboardButton("📊 سيستەمێ 5000 ڕاپۆرتان", callback_data="menu_reports"),
+            InlineKeyboardButton("📊 سيستەمێ 1285 ڕاپۆرتان", callback_data="menu_reports"),
             InlineKeyboardButton("📜 سەنتەری ڕێپۆرتان (مێژوو)", callback_data="report_history"),
         ],
         [InlineKeyboardButton("🛒 کڕینا کلیلان (تەماس)", url="https://t.me/YUSEEF_SURCHI")]
@@ -119,8 +119,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "menu_reports":
         report_menu = (
-            "🌌 **ناڤەندا کۆنتڕۆلا 5000 ڕاپۆرتێن جیهانی**\n\n"
-            "• هەموو ئامرازێن هێرش و ڕاپۆرتان ب شێوەیەکێ خودکار کار دکەن.\n"
+            "🌌 **ناڤەندا کۆنتڕۆلا 1285 ڕاپۆرتێن پێشکەفتی**\n\n"
+            "• هەموو ئامرازێن هێرش و ڕاپۆرتان ب شێوەیەکێ قەوی و خودکار کار دکەن.\n"
             "• هەر 1 کلیل = 5 کردارێن سەرپێچییێ.\n\n"
             "👇 پەڕەیا خۆ بژێرە بۆ بینینا لستان:"
         )
@@ -166,7 +166,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         rep_key = data.replace("execute_", "")
         report_name, emoji = MASSIVE_REPORT_TYPES.get(rep_key, ("تشتێ خراب", "⚠️"))
         
-        # تۆمارکرنا مێژووا ڕێپۆرتی (History)
+        # تۆمارکرنا مێژووا ڕێپۆرتی دگەل دەمژمێر، خولەک و چرکە
         histories = load_data(HISTORY_FILE)
         if user_id not in histories:
             histories[user_id] = []
@@ -176,7 +176,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "name": f"{emoji} {report_name}",
             "time": current_time_str
         })
-        # تنێ 10 مێژوویێن دوماهیی ڕادگریت
         histories[user_id] = histories[user_id][:10]
         save_data(HISTORY_FILE, histories)
 
@@ -192,7 +191,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not user_history:
             hist_text = "📜 **سەنتەرێ ڕێپۆرتان (مێژوو):**\n\nتە هێشتا هیچ ڕێپۆرتەک نەنارتیە!"
         else:
-            hist_text = "📜 **دوماهیک ڕێپۆرتێن تە هنارتین:**\n\n"
+            hist_text = "📜 **دوماهیک ڕێپۆرتێن تە هنارتین دگەل دەمی:**\n\n"
             for idx, h in enumerate(user_history, 1):
                 hist_text += f"{idx}. {h['name']}\n   ⏱ کات: `{h['time']}`\n\n"
 
@@ -206,7 +205,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_time = time.time()
         last_claim = cooldowns.get(user_id, 0)
         
-        cooldown_time = 4 * 3600 # 4 دەمژمێر ب چرکە
+        cooldown_time = 4 * 3600 # 4 دەمژمێر
         
         if current_time - last_claim < cooldown_time:
             remaining_sec = int(cooldown_time - (current_time - last_claim))
@@ -238,7 +237,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    print("بۆتێ 5000 ڕاپۆرتان ب دیزاینەکا خەیالی یێ ئامادەیە و کار دکەت...")
+    print("بۆتێ 1285 ڕاپۆرتان ب دیزاینەکا قەوی و خەیالی یێ کار دکەت...")
     app.run_polling()
 
 if __name__ == "__main__":

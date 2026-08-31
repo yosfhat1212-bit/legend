@@ -23,8 +23,11 @@ def load_data(file_path):
     return {}
 
 def save_data(file_path, data):
-    with open(file_path, "w") as f:
-        json.dump(data, f)
+    try:
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        logging.error(f"Error saving data to {file_path}: {e}")
 
 # دروستکرنا لستا زەبەلاح و پێشکەفتی یا 1285 ڕاپۆرتێن بۆتی
 MASSIVE_REPORT_TYPES = {
@@ -83,7 +86,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• **ناڤ:** {name}\n"
         f"• **یوزەرنەیم:** `{username}`\n"
         f"• **باڵانسا نها:** `💎 {balance} کلیل`\n\n"
-        f"🎁 **دیارییا دەمەکی (هر 4 دەمژمێران):**\n"
+        f"🎁 **دیارییا دەمەکی (هر 5 دەمژمێران):**\n"
         f"⏱ دۆخ: `ڤەکری و بەرهەڤ بۆ وەرگرتنێ`"
     )
 
@@ -104,7 +107,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         try:
             await query.edit_message_text(text=profile_text, parse_mode="Markdown", reply_markup=reply_markup)
-        except:
+        except Exception:
             pass
 
 
@@ -213,7 +216,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_time = time.time()
         last_claim = cooldowns.get(user_id, 0)
         
-        cooldown_time = 4 * 3600
+        cooldown_time = 5 * 3600 # 5 دەمژمێر ب چرکە
         
         if current_time - last_claim < cooldown_time:
             remaining_sec = int(cooldown_time - (current_time - last_claim))

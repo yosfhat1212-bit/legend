@@ -125,11 +125,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "👇 پەڕەیا خۆ بژێرە بۆ بینینا لستان:"
         )
         report_keyboard = [
-            [InlineKeyboardButton("📄 پەڕەیا 1 (دەستپێک)", callback_data="page_0")],
+            [InlineKeyboardButton("📄 دەستپێکرنا پەڕەیا 1", callback_data="page_0")],
             [InlineKeyboardButton("🛒 کڕینا باڵانسی (راستەوخۆ)", url="https://t.me/YUSEEF_SURCHI")],
             [InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="back_to_start")],
         ]
-        await query.edit_message_text(text=report_menu, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(report_keyboard))
+        try:
+            await query.edit_message_text(text=report_menu, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(report_keyboard))
+        except Exception:
+            pass
 
     elif data.startswith("page_"):
         page_idx = int(data.replace("page_", ""))
@@ -154,19 +157,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if nav_buttons:
             rep_keyboard.append(nav_buttons)
 
-        rep_keyboard.append([InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="menu_reports")])
+        rep_keyboard.append([InlineKeyboardButton("🔙 پاشڤە بۆ مێنۆیا سەرەکی", callback_data="menu_reports")])
 
-        await query.edit_message_text(
-            text=f"⚡ **لستا فەرمیا ڕاپۆرتان (پەڕە {page_idx + 1} ژ {total_pages}):**",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(rep_keyboard),
-        )
+        try:
+            await query.edit_message_text(
+                text=f"⚡ **لستا فەرمیا ڕاپۆرتان (پەڕە {page_idx + 1} ژ {total_pages}):**\nبۆ دیتنا زێدەتر کلیکا دوگمەیێن خوارێ بکە:",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(rep_keyboard),
+            )
+        except Exception:
+            pass
 
     elif data.startswith("execute_"):
         rep_key = data.replace("execute_", "")
         report_name, emoji = MASSIVE_REPORT_TYPES.get(rep_key, ("تشتێ خراب", "⚠️"))
         
-        # تۆمارکرنا مێژووا ڕێپۆرتی دگەل دەمژمێر، خولەک و چرکە
         histories = load_data(HISTORY_FILE)
         if user_id not in histories:
             histories[user_id] = []
@@ -198,14 +203,17 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         hist_keyboard = [
             [InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="back_to_start")]
         ]
-        await query.edit_message_text(text=hist_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(hist_keyboard))
+        try:
+            await query.edit_message_text(text=hist_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(hist_keyboard))
+        except Exception:
+            pass
 
     elif data == "claim_gift":
         cooldowns = load_data(COOLDOWN_FILE)
         current_time = time.time()
         last_claim = cooldowns.get(user_id, 0)
         
-        cooldown_time = 4 * 3600 # 4 دەمژمێر
+        cooldown_time = 4 * 3600
         
         if current_time - last_claim < cooldown_time:
             remaining_sec = int(cooldown_time - (current_time - last_claim))

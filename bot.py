@@ -1,10 +1,31 @@
+import json
 import logging
+import os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-TOKEN = "8680499622:AAHTpgQXyGKyFATDolT6tmBH4USgct1HU4A"
+# خوێندنا توکنی ژ ژینگەها Railway یان دانانا وێ ب رەق
+TOKEN = os.getenv("BOT_TOKEN", "8680499622:AAHTpgQXyGKyFATDolT6tmBH4USgct1HU4A")
+
+BALANCE_FILE = "balances.json"
+
+
+def load_balances():
+  if os.path.exists(BALANCE_FILE):
+    with open(BALANCE_FILE, "r") as f:
+      try:
+        return json.load(f)
+      except:
+        return {}
+  return {}
+
+
+def save_balances(balances):
+  with open(BALANCE_FILE, "w") as f:
+    json.dump(balances, f)
+
 
 # دروستکرنا لستا زەبەلاح و پڕ تشتێن مەترسیدار، هاککەری و بندکرنا کەناڵان ژ 1 هەتا 5000
 MASSIVE_REPORT_TYPES = {
@@ -18,7 +39,6 @@ MASSIVE_REPORT_TYPES = {
     "rep_8": ("🔫 فرۆتنا چەکان (Illegal Arms Trading)", "🔫"),
     "rep_9": ("🛑 قەدەغەکرنا مافێ مرۆڤی (Human Rights Violation)", "🛑"),
     "rep_10": ("🎭 خۆخاپاندن و ناسناما درۆین (Fake Identity)", "🎭"),
-    # پشکێن تایبەت یێن هاککرنا کەناڵان، گرووپا و هێرشێن سایبەر
     "rep_11": ("💻 هێرشا ڕاوەستاندنا کەناڵێ (Channel DDoS Sabotage)", "💻"),
     "rep_12": ("🔓 هاککرن و دزینا کەناڵێن تەلەگرام (Telegram Channel Heist)", "🔓"),
     "rep_13": ("🛡 لادانا ئەدمنێن سەرەکی و کۆنترۆلا کەناڵی (Admin Session Revoke)", "🛡"),
@@ -31,7 +51,6 @@ MASSIVE_REPORT_TYPES = {
     "rep_20": ("📥 دانانا باکدۆران (Backdoor Trojan بۆ کۆنترۆلا تەواو)", "📥"),
 }
 
-# پڕکرنا لستێ ب شێوەیەکێ خودکار و زیرەک ژ (21 هەتا 5000) دگەل هەموو سەرپێچی و تشتێن هاککرنا کەناڵان
 for i in range(21, 5001):
   if i % 4 == 0:
     emoji = "🔓"
@@ -50,9 +69,12 @@ for i in range(21, 5001):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
   user = update.effective_user
+  user_id = str(user.id)
   username = f"@{user.username}" if user.username else "نەدیار"
   name = user.first_name
-  balance = 0
+
+  balances = load_balances()
+  balance = balances.get(user_id, 0)
 
   profile_text = (
       f"👤 **پڕۆفایلێ تە یێ پڕۆفیشناڵ**\n\n"
@@ -78,20 +100,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
   elif update.callback_query:
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text(
-        text=profile_text, parse_mode="Markdown", reply_markup=reply_markup
-    )
+    try:
+      await query.edit_message_text(
+          text=profile_text, parse_mode="Markdown", reply_markup=reply_markup
+      )
+    except:
+      pass
 
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
   query = update.callback_query
   await query.answer()
   data = query.data
+  user_id = str(query.from_user.id)
 
   if data == "back_to_start":
-    user = update.effective_user
-    username = f"@{user.username}" if user.username else "نەدیار"
-    balance = 0
+    username = f"@{query.from_user.username}" if query.from_user.username else "نەدیار"
+    balances = load_balances()
+    balance = balances.get(user_id, 0)
+
     profile_text = (
         f"👤 **پڕۆفایلێ تە**\n\n"
         f"• یوزەرنەیم: `{username}`\n"
@@ -110,15 +137,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
   elif data == "menu_reports":
     report_menu = (
         "⚠️ **سیستەمێ زەبەلاح یێ 5000 ڕاپۆرتان و هاککرنا کەناڵان**\n\n"
-        "بۆت نوکە پڕبوویە ژ تەواویا **5000** جۆرێن سەرپێچییێن جیهانی و ئامرازێن هاککرنا کەناڵ و گرووپان!\n"
+        "بۆت نوکە پڕبوویە ژ تەواویا **5000** جۆرێن سەرپێچییێن جیهانی!\n"
         "• 1 کلیل = 5 ڕاپۆرت\n"
         "• 5 کلیل = 50 ڕاپۆرت\n"
-        "• 10 کلیل = 100 ڕاپۆرت\n"
-        "• 150 کلیل = 1000 ڕاپۆرت (بۆ بندکرنا کەناڵان ب ڕاستی)\n\n"
-        "👇 پشکەکا نموونەیی ژ لستا 5000 دانەیی بژێرە:"
+        "• 10 کلیل = 100 ڕاپۆرت\n\n"
+        "👇 پەڕەیا خۆ بژێرە بۆ بینینا ڕاپۆرتان:"
     )
     report_keyboard = [
-        [InlineKeyboardButton("📂 نیشاندانا پشکا 1 (نموونا 10 سەرەکی)", callback_data="rep_page_1")],
+        [InlineKeyboardButton("📄 پەییا 1 (rep_1 بۆ rep_10)", callback_data="page_1")],
         [InlineKeyboardButton("🛒 بۆ کڕینێ سەرەدانا چاتێ بکە", url="https://t.me/YUSEEF_SURCHI")],
         [InlineKeyboardButton("🔙 پاشڤە (Back)", callback_data="back_to_start")],
     ]
@@ -126,16 +152,39 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text=report_menu, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(report_keyboard)
     )
 
-  elif data == "rep_page_1":
-    items = list(MASSIVE_REPORT_TYPES.items())[:10]
+  elif data.startswith("page_"):
+    page_num = int(data.replace("page_", ""))
+    items_list = list(MASSIVE_REPORT_TYPES.items())
+    per_page = 8
+    start_idx = (page_num - 1) * per_page
+    end_idx = start_idx + per_page
+
+    current_items = items_list[start_idx:end_idx]
     rep_keyboard = []
-    for key_code, (title, emoji) in items:
+
+    for key_code, (title, emoji) in current_items:
       rep_keyboard.append(
-          [InlineKeyboardButton(f"{emoji} {title}", callback_data=f"execute_{key_code}")]
+          [InlineKeyboardButton(f"{emoji} {title[:30]}...", callback_data=f"execute_{key_code}")]
       )
+
+    # دوگمەیێن پەیجینگی (پێش و پاش)
+    nav_buttons = []
+    if page_num > 1:
+      nav_buttons.append(
+          InlineKeyboardButton("⬅️ پێشتر", callback_data=f"page_{page_num - 1}")
+      )
+    if end_idx < len(items_list):
+      nav_buttons.append(
+          InlineKeyboardButton("دواتر ➡️", callback_data=f"page_{page_num + 1}")
+      )
+
+    if nav_buttons:
+      rep_keyboard.append(nav_buttons)
+
     rep_keyboard.append([InlineKeyboardButton("🔙 پاشڤە بۆ مێنۆیا سەرەکی", callback_data="menu_reports")])
+
     await query.edit_message_text(
-        text="📌 **لستا نموونەیی (ژ کۆما 5000 تشتێن خراب و هاککرنا کەناڵان):**",
+        text=f"📌 **لستا ڕاپۆرتان (پەڕە {page_num} ژ {len(items_list)//per_page}):**",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(rep_keyboard),
     )
@@ -144,14 +193,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     rep_key = data.replace("execute_", "")
     report_name, emoji = MASSIVE_REPORT_TYPES.get(rep_key, ("تشتێ خراب", "⚠️"))
     await query.answer(
-        f"{emoji} سەرکەفتن! داخوازییا هاککرن و ڕاپۆرتێ بۆ ({report_name}) هاتە هنارتن.",
+        f"{emoji} سەرکەفتن! داخوازییا ڕاپۆرتێ بۆ ({report_name}) هاتە هنارتن.",
         show_alert=True,
     )
 
   elif data == "claim_gift":
+    balances = load_balances()
+    current_bal = balances.get(user_id, 0)
+    balances[user_id] = current_bal + 5
+    save_balances(balances)
     await query.answer(
         "🎁 پیرۆزە براتە عزیز! 5 کلیلان بۆ باڵانسا تە هاتە زێدەکرن.", show_alert=True
     )
+    # نووکرنا مێنۆیا سەرەکی ب باڵانسا نوو
+    await start(update, context)
 
   elif data == "buy_keys":
     await query.answer("🛒 بۆ کڕینا کلیلان سەرەدانا چاتێ بکە: @YUSEEF_SURCHI", show_alert=True)

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رێڤەبرنا باڵانسی - Legend Bot</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 350px; text-align: center; }
+        input, button { width: 100%; padding: 12px; margin-top: 15px; border-radius: 8px; border: none; font-size: 16px; box-sizing: border-box; }
+        input { background: #334155; color: white; text-align: center; }
+        button { background: #3b82f6; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #2563eb; }
+        .profile-img { width: 90px; height: 90px; border-radius: 50%; margin-bottom: 15px; border: 3px solid #3b82f6; object-fit: cover; display: none; margin-left: auto; margin-right: auto; }
+        .hidden { display: none; }
+        .success { color: #22c55e; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>زیادکرنا باڵانسی</h2>
+    <input type="text" id="userInput" placeholder="Telegram ID بنڤیسە">
+    <input type="number" id="amountInput" placeholder="ژمارەیا کلیلان (بۆ نموونە: 10)">
+    <button onclick="searchUser()">پشکنینا ئەکاونتی</button>
+
+    <div id="resultBox" class="hidden" style="margin-top: 20px;">
+        <img id="userPhoto" class="profile-img" src="" alt="وێنەیێ پڕۆفایلی">
+        <p><b>ناڤ:</b> <span id="userName">-</span></p>
+        <p><b>يوزەرنەیم:</b> <span id="userUsername">-</span></p>
+        <button onclick="confirmAdd()" style="background: #22c55e;">تۆمارکرنا کلیلان</button>
+    </div>
+    <p id="msg" class="success"></p>
+</div>
+
+<script>
+    // لێرە توکنا بۆتا خۆ دانە
+    const BOT_TOKEN = "8680499622:AAHTpgQXyGKyFATDolT6tmBH4USgct1HU4A";
+    let foundUserId = null;
+
+    async function searchUser() {
+        let query = document.getElementById('userInput').value.trim();
+        if(!query) return alert("تکایە ئاییدی بنڤیسە!");
+
+        let url = `https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${query}`;
+        try {
+            let response = await fetch(url);
+            let data = await response.json();
+            
+            if(data.ok) {
+                let chat = data.result;
+                foundUserId = chat.id;
+                document.getElementById('userName').innerText = chat.first_name || "نەدیار";
+                document.getElementById('userUsername').innerText = "@" + (chat.username || "نەدیار");
+                
+                // ئینانا وێنەیێ پڕۆفایلی
+                getProfilePhoto(foundUserId);
+                
+                document.getElementById('resultBox').classList.remove('hidden');
+                document.getElementById('msg').innerText = "";
+            } else {
+                alert("بەکارهێنەر نەهاتە دیتن! دڤێت ئەو کەسە پێشتر `/start` ل بۆتی لێدابێت.");
+            }
+        } catch (e) {
+            alert("کێشەیەک د پەیوەندیێ دا هەیە!");
+        }
+    }
+
+    async function getProfilePhoto(userId) {
+        let imgElem = document.getElementById('userPhoto');
+        let photosUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getUserProfilePhotos?user_id=${userId}&limit=1`;
+        
+        try {
+            let res = await fetch(photosUrl);
+            let data = await res.json();
+            if(data.ok && data.result.total_count > 0) {
+                let fileId = data.result.photos[0][0].file_id;
+                let fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+                let fileData = await fileRes.json();
+                if(fileData.ok) {
+                    let filePath = fileData.result.file_path;
+                    imgElem.src = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
+                    imgElem.style.display = "block";
+                    return;
+                }
+            }
+            imgElem.style.display = "none";
+        } catch(e) {
+            imgElem.style.display = "none";
+        }
+    }
+
+    function confirmAdd() {
+        let amount = document.getElementById('amountInput').value;
+        if(!amount) return alert("ژمارەیا کلیلان بنڤیسە!");
+        
+        // لێرە دەتوانیت ئاگادار ببەی یان بچی ل ناو بۆتێ یان داتابەیسێ زێدە بکەی
+        document.getElementById('msg').innerText = `✅ ب سەرکەفتن هاتە ئامادەکرن بۆ ID: ${foundUserId}`;
+        document.getElementById('resultBox').classList.add('hidden');
+    }
+</script>
+
+</body>
+</html>

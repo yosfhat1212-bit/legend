@@ -3,15 +3,17 @@ import logging
 import os
 import time
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, ContextTypes, filters
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 TOKEN = os.getenv("BOT_TOKEN", "8680499622:AAHTpgQXyGKyFATDolT6tmBH4USgct1HU4A")
+ADMIN_ID = "123456789"  # ID یا خۆ وەک ڕێڤەبەر لێرە دانە داکو پێزانین بۆ تە بێن
 
 BALANCE_FILE = "balances.json"
 COOLDOWN_FILE = "cooldowns.json"
 HISTORY_FILE = "history.json"
+USED_KEYS_FILE = "used_keys.json"
 
 def load_data(file_path):
     if os.path.exists(file_path):
@@ -116,12 +118,69 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 
+async def handle_secret_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+    user = update.effective_user
+    user_id = str(user.id)
+    
+    # پشکنینا کلیلەکا نهێنی یا تایبەت
+    if text == "rayan1324675554":
+        used_keys = load_data(USED_KEYS_FILE)
+        
+        if user_id in used_keys.get("users", []):
+            await update.message.reply_text("⚠️ تە بەری نوکە ئەڤ کلیلە بکار ئینایە و تنێ ١ جار دهێتە بکارئینان!")
+            return
+
+        if "global_used" in used_keys and used_keys["global_used"]:
+            await update.message.reply_text("⚠️ ئەڤ کلیلە بەری نوکە هاتیە بکارئینان و اکسپایێر بوویە!")
+            return
+
+        # تۆمارکرنا کو کلیل هاتە بکارئینان
+        if "users" not in used_keys:
+            used_keys["users"] = []
+        used_keys["users"].append(user_id)
+        used_keys["global_used"] = True
+        save_data(USED_KEYS_FILE, used_keys)
+
+        # زێدەکرنا کلیلان بۆ باڵانسا بەکارهێنەری (بۆ نموونە 10 کلیلێن custom)
+        balances = load_data(BALANCE_FILE)
+        current_bal = balances.get(user_id, 5)
+        added_amount = 10  # ژمارەیا کلیلێن زێدەبووی
+        balances[user_id] = current_bal + added_amount
+        save_data(BALANCE_FILE, balances)
+
+        # پەیاما سەرکەفتنێ بۆ بەکارهێنەری
+        await update.message.reply_text(
+            f"🎉 پیرۆزە! کلیلا تایبەت ب سەرکەفتن هاتە فعالکرن.\n"
+            f"💎 بڕێ `{added_amount} کلیل` بۆ باڵانسا تە هاتە زێدەکرن!\n"
+            f"⚠️ ئەڤ کلیلە اکسپایێر بوو و کەسەک دی ناتوانێ بکار بینیت.",
+            parse_mode="Markdown"
+        )
+
+        # هنارتنا پێزانینان بۆ ڕێڤەبەری (دگەل یوزەرناڤ، ئایدی و پڕۆفایلێ ب وێنە یاخود لینک)
+        admin_msg = (
+            f"🚨 **چالاكبوونا کلیلا نهێنی!**\n\n"
+            f"👤 ناڤ: {user.first_name}\n"
+            f"🆔 ئایدی: `{user.id}`\n"
+            f"🔗 یوزەرنەیم: @{user.username if user.username else 'نەدیار'}\n"
+            f"💎 کلیلێن بۆ هاتنە زێدەکرن: +{added_amount}\n"
+            f"🔒 دۆخ: کلیل هاتە بکارئینان و اکسپایێر بوو."
+        )
+        
+        try:
+            await context.bot.send_message(chat_id=ADMIN_ID, text=admin_msg, parse_mode="Markdown")
+        except Exception:
+            pass
+    else:
+        # ئەگەر پیامەک ئاسایی بوو، بتۆڤێ دەستپێکێ بینە یان پەیاما ئاسایی بدە
+        await start(update, context)
+
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     user_id = str(query.from_user.id)
 
-    # ل دەستپێکێ بێ لیمیت و بە لەز لۆدینگا دوگمەی لادە
     try:
         await query.answer()
     except Exception:
@@ -270,8 +329,10 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
+    # هاندەرێ پەیامان بۆ پشکنینا کلیلێن نهێنی و ڤەشارتى
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_secret_key))
 
-    print("بۆتێ 1285 ڕاپۆرتان ب دیزاینەکا قەوی و خەیالی یێ کار دکەت...")
+    print("بۆتێ 1285 ڕاپۆرتان و سیستەمێ کلیلێن نهێنی ب سەرکەفتن د کار دکەت...")
     app.run_polling()
 
 if __name__ == "__main__":

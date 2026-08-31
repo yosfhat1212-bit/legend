@@ -11,6 +11,7 @@ TOKEN = os.getenv("BOT_TOKEN", "8680499622:AAHTpgQXyGKyFATDolT6tmBH4USgct1HU4A")
 
 BALANCE_FILE = "balances.json"
 COOLDOWN_FILE = "cooldowns.json"
+HISTORY_FILE = "history.json"
 
 def load_data(file_path):
     if os.path.exists(file_path):
@@ -90,8 +91,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎁 وەرگرتنا 5 کلیلێن بەلاش", callback_data="claim_gift")],
         [
             InlineKeyboardButton("📊 سيستەمێ 5000 ڕاپۆرتان", callback_data="menu_reports"),
-            InlineKeyboardButton("🛒 کڕینا کلیلان (تەماس)", url="https://t.me/YUSEEF_SURCHI"),
-        ]
+            InlineKeyboardButton("📜 سەنتەری ڕێپۆرتان (مێژوو)", callback_data="report_history"),
+        ],
+        [InlineKeyboardButton("🛒 کڕینا کلیلان (تەماس)", url="https://t.me/YUSEEF_SURCHI")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -152,7 +154,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if nav_buttons:
             rep_keyboard.append(nav_buttons)
 
-        rep_keyboard.append([InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="back_to_start")])
+        rep_keyboard.append([InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="menu_reports")])
 
         await query.edit_message_text(
             text=f"⚡ **لستا فەرمیا ڕاپۆرتان (پەڕە {page_idx + 1} ژ {total_pages}):**",
@@ -163,24 +165,56 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("execute_"):
         rep_key = data.replace("execute_", "")
         report_name, emoji = MASSIVE_REPORT_TYPES.get(rep_key, ("تشتێ خراب", "⚠️"))
+        
+        # تۆمارکرنا مێژووا ڕێپۆرتی (History)
+        histories = load_data(HISTORY_FILE)
+        if user_id not in histories:
+            histories[user_id] = []
+        
+        current_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        histories[user_id].insert(0, {
+            "name": f"{emoji} {report_name}",
+            "time": current_time_str
+        })
+        # تنێ 10 مێژوویێن دوماهیی ڕادگریت
+        histories[user_id] = histories[user_id][:10]
+        save_data(HISTORY_FILE, histories)
+
         await query.answer(
             f"{emoji} سەرکەفتن! داخوازییا ڕاپۆرتێ بۆ ({report_name}) ب سەرکەفتن هاتە هنارتن.",
             show_alert=True,
         )
+
+    elif data == "report_history":
+        histories = load_data(HISTORY_FILE)
+        user_history = histories.get(user_id, [])
+
+        if not user_history:
+            hist_text = "📜 **سەنتەرێ ڕێپۆرتان (مێژوو):**\n\nتە هێشتا هیچ ڕێپۆرتەک نەنارتیە!"
+        else:
+            hist_text = "📜 **دوماهیک ڕێپۆرتێن تە هنارتین:**\n\n"
+            for idx, h in enumerate(user_history, 1):
+                hist_text += f"{idx}. {h['name']}\n   ⏱ کات: `{h['time']}`\n\n"
+
+        hist_keyboard = [
+            [InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="back_to_start")]
+        ]
+        await query.edit_message_text(text=hist_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(hist_keyboard))
 
     elif data == "claim_gift":
         cooldowns = load_data(COOLDOWN_FILE)
         current_time = time.time()
         last_claim = cooldowns.get(user_id, 0)
         
-        cooldown_time = 4 * 3600 # 4 دەمژمێر
+        cooldown_time = 4 * 3600 # 4 دەمژمێر ب چرکە
         
         if current_time - last_claim < cooldown_time:
             remaining_sec = int(cooldown_time - (current_time - last_claim))
             rem_hours = remaining_sec // 3600
             rem_mins = (remaining_sec % 3600) // 60
+            rem_secs = remaining_sec % 60
             await query.answer(
-                f"⚠️ هێشتا دەمێ وەرگرتنا دیارییا تە نەهاتیە! ل هیڤیا {rem_hours} دەمژمێر و {rem_mins} خولەکان بن.",
+                f"⚠️ هێشتا دەمێ وەرگرتنی نەهاتیە!\n⏳ ماوەیێ مایی: {rem_hours} دەمژمێر، {rem_mins} خولەک و {rem_secs} چرکە.",
                 show_alert=True
             )
             return

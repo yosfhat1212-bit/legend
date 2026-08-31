@@ -75,10 +75,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = f"@{user.username}" if user.username else "نەدیار"
     name = user.first_name
 
-    # پشکپێکرنا باڵانسی: ئەگەر کەسەک بۆ جارەکا ئێکشەم بێتە ناو بۆتی، 5 کلیلێن دەستپێکێ ب خۆکار ددەینێ
     balances = load_data(BALANCE_FILE)
     if user_id not in balances:
-        balances[user_id] = 5  # 5 کلیلێن بەلاش یێن دەستپێکێ
+        balances[user_id] = 5  # 5 کلیلێن دەستپێکی
         save_data(BALANCE_FILE, balances)
 
     balance = balances.get(user_id, 5)
@@ -110,8 +109,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(profile_text, parse_mode="Markdown", reply_markup=reply_markup)
     elif update.callback_query:
         query = update.callback_query
-        await query.answer("🔄 پڕۆفایل ب سەرکەفتن هاتە نووژەنکرن!")
         try:
+            await query.answer()
             await query.edit_message_text(text=profile_text, parse_mode="Markdown", reply_markup=reply_markup)
         except Exception:
             pass
@@ -119,9 +118,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     data = query.data
     user_id = str(query.from_user.id)
+
+    # ل دەستپێکێ بێ لیمیت و بە لەز لۆدینگا دوگمەی لادە
+    try:
+        await query.answer()
+    except Exception:
+        pass
 
     if data == "back_to_start" or data == "refresh_profile":
         await start(update, context)
@@ -193,10 +197,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         histories[user_id] = histories[user_id][:10]
         save_data(HISTORY_FILE, histories)
 
-        await query.answer(
-            f"{emoji} سەرکەفتن! داخوازییا ڕاپۆرتێ بۆ ({report_name}) ب سەرکەفتن هاتە هنارتن.",
-            show_alert=True,
-        )
+        try:
+            await context.bot.answer_callback_query(
+                callback_query_id=query.id,
+                text=f"{emoji} سەرکەفتن! داخوازییا ڕاپۆرتێ بۆ ({report_name}) ب سەرکەفتن هاتە هنارتن.",
+                show_alert=True
+            )
+        except Exception:
+            pass
 
     elif data == "report_history":
         histories = load_data(HISTORY_FILE)
@@ -222,17 +230,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_time = time.time()
         last_claim = cooldowns.get(user_id, 0)
         
-        cooldown_time = 5 * 3600 # 5 دەمژمێر ب چرکە
+        cooldown_time = 5 * 3600
         
         if current_time - last_claim < cooldown_time:
             remaining_sec = int(cooldown_time - (current_time - last_claim))
             rem_hours = remaining_sec // 3600
             rem_mins = (remaining_sec % 3600) // 60
             rem_secs = remaining_sec % 60
-            await query.answer(
-                f"⚠️ هێشتا دەمێ وەرگرتنی نەهاتیە!\n⏳ ماوەیێ مایی: {rem_hours} دەمژمێر، {rem_mins} خولەک و {rem_secs} چرکە.",
-                show_alert=True
-            )
+            try:
+                await context.bot.answer_callback_query(
+                    callback_query_id=query.id,
+                    text=f"⚠️ هێشتا دەمێ وەرگرتنی نەهاتیە!\n⏳ ماوەیێ مایی: {rem_hours} دەمژمێر، {rem_mins} خولەک و {rem_secs} چرکە.",
+                    show_alert=True
+                )
+            except Exception:
+                pass
             return
 
         balances = load_data(BALANCE_FILE)
@@ -243,9 +255,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cooldowns[user_id] = current_time
         save_data(COOLDOWN_FILE, cooldowns)
 
-        await query.answer(
-            "🎁 پیرۆزە! 5 کلیلێن بەلاش ب سەرکەفتن هاتنە زێدەکرن بۆ پڕۆفایلا تە.", show_alert=True
-        )
+        try:
+            await context.bot.answer_callback_query(
+                callback_query_id=query.id,
+                text="🎁 پیرۆزە! 5 کلیلێن بەلاش ب سەرکەفتن هاتنە زێدەکرن بۆ پڕۆفایلا تە.",
+                show_alert=True
+            )
+        except Exception:
+            pass
         await start(update, context)
 
 

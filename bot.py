@@ -10,12 +10,13 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandle
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 TOKEN = os.getenv("BOT_TOKEN", "8680499622:AAHTpgQXyGKyFATDolT6tmBH4USgct1HU4A")
-ADMIN_ID = "123456789"  # ID یا خۆ وەک ڕێڤەبەر لێرە دانە داکو پێزانین بۆ تە بێن
+ADMIN_ID = "123456789"  # ئایدییا خۆ وەک ڕێڤەبەر لێرە دانە
 
 BALANCE_FILE = "balances.json"
 COOLDOWN_FILE = "cooldowns.json"
 HISTORY_FILE = "history.json"
 USED_KEYS_FILE = "used_keys.json"
+PENDING_GEN_FILE = "pending_gen.json"
 
 def load_data(file_path):
     if os.path.exists(file_path):
@@ -33,31 +34,9 @@ def save_data(file_path, data):
     except Exception as e:
         logging.error(f"Error saving data to {file_path}: {e}")
 
-# دروستکرنا لستا زەبەلاح و پێشکەفتی یا 1285 ڕاپۆرتێن بۆتی
-MASSIVE_REPORT_TYPES = {
-    "rep_1": ("🚨 سپام و بڵاڤکرنا ڤیدیۆکێن بێ مانا", "🚨"),
-    "rep_2": ("🔞 ناڤەرۆکا نەشیاو و پۆلێن 18+", "🔞"),
-    "rep_3": ("⚠️ توندوتیژی و پێشێلکاریێن دڕندانە", "⚠️"),
-    "rep_4": ("🔪 گروپێن تێرۆرستی و چەکدار", "🔪"),
-    "rep_5": ("💸 فێلبازی و سکامێن ئابووری", "💸"),
-    "rep_6": ("🔗 لینکێن نەیاسایی و ڤایرۆسێن مەترسیدار", "🔗"),
-    "rep_7": ("💊 فرۆتنا ماددەیێن هوشْبەر", "💊"),
-    "rep_8": ("🔫 بازرگانیا چەکێن قەدەغەکری", "🔫"),
-    "rep_9": ("🛑 پێشێلکرنا مافێن سەرەکی یێن مرۆڤی", "🛑"),
-    "rep_10": ("🎭 خۆخاپاندن و دروستکرنا ناسنامەیێن درۆین", "🎭"),
-    "rep_11": ("💻 هێرشا ڕاوەستاندنا خزمەتگوزاریێ (DDoS Sabotage)", "💻"),
-    "rep_12": ("🔓 ئامرازێن هاککرن و دزینا کەناڵێن تەلەگرام", "🔓"),
-    "rep_13": ("🛡 لادانا ئەدمنێن سەرەکی و کۆنترۆلا کەناڵێ", "🛡"),
-    "rep_14": ("🕵️ دزینا تۆکن و کۆوکیێن سێرڤەری", "🕵️"),
-    "rep_15": ("🦠 بەلاڤکرنا ڕانسۆموێر (Ransomware Attack)", "🦠"),
-    "rep_16": ("📡 هێرشێن فیشینگا پێشکەفتی بۆ کۆنترۆلێ", "📡"),
-    "rep_17": ("⚡ شکاندنا کلیل و سکیورتییا گرووپان", "⚡"),
-    "rep_18": ("🌐 هێرشێن SQL Injection بۆ بانکێن داتایێ", "🌐"),
-    "rep_19": ("⚙️ بەلاڤکرنا 0-Day Exploit بۆ شکستپێکرنێ", "⚙️"),
-    "rep_20": ("📥 دانانا باکدۆر و ترۆجانێن کۆنترۆلا تەواو", "📥"),
-}
-
-for i in range(21, 1286):
+# چێکرنا ڕاپۆرتان ب تەنێ rep_1 هەتا rep_30 ب شێوەیەکێ جوان
+MASSIVE_REPORT_TYPES = {}
+for i in range(1, 31):
     if i % 4 == 0:
         emoji = "⚡"
         title = f"هێرشا پله‌ بلند و کۆنترۆلا توند ژمارە {i}"
@@ -81,30 +60,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     balances = load_data(BALANCE_FILE)
     if user_id not in balances:
-        balances[user_id] = 5  # 5 کلیلێن دەستپێکی
+        balances[user_id] = 5
         save_data(BALANCE_FILE, balances)
 
     balance = balances.get(user_id, 5)
 
     profile_text = (
         f"╔══════════════════════╗\n"
-        f" 🛡 **سەنتەرێ پڕۆفیشناڵ یێ هاک و ڕاپۆرتان**\n"
+        f" 🛡 **سەنتەرێ پڕۆفیشناڵ یێ CC Panel**\n"
         f"╚══════════════════════╝\n\n"
         f"👤 **پڕۆفایلێ بەکارهێنەری:**\n"
         f"• **ناڤ:** {name}\n"
         f"• **یوزەرنەیم:** `{username}`\n"
         f"• **باڵانسا نها:** `💎 {balance} کلیل`\n\n"
-        f"🎁 **دیارییا دەمەکی (هر 5 دەمژمێران):**\n"
+        f"🎁 **دیارییا دەمەکی (هەر ٢٤ دەمژمێران):**\n"
         f"⏱ دۆخ: `ڤەکری و بەرهەڤ بۆ وەرگرتنێ`"
     )
 
     keyboard = [
-        [InlineKeyboardButton("🎁 وەرگرتنا 5 کلیلێن بەلاش", callback_data="claim_gift")],
+        [InlineKeyboardButton("🎁 وەرگرتنا 10 کلیلێن بەلاش (24 دەمژمێر)", callback_data="claim_gift")],
         [
-            InlineKeyboardButton("📊 سيستەمێ 1285 ڕاپۆرتان", callback_data="menu_reports"),
-            InlineKeyboardButton("📜 سەنتەری ڕێپۆرتان (مێژوو)", callback_data="report_history"),
+            InlineKeyboardButton("📊 سيستەمێ ڕاپۆرتان (rep_1 بۆ rep_30)", callback_data="menu_reports"),
+            InlineKeyboardButton("📜 مێژووا ڕاپۆرتان", callback_data="report_history"),
         ],
-        [InlineKeyboardButton("🔄 نووژەنکرنا پڕۆفایلی (Refresh)", callback_data="refresh_profile")],
+        [InlineKeyboardButton("🔄 نووژەنکرنا پڕۆفایلی", callback_data="refresh_profile")],
         [InlineKeyboardButton("🛒 کڕینا کلیلان (تەماس)", url="https://t.me/YUSEEF_SURCHI")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -120,64 +99,92 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 
-async def handle_secret_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_cc_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user = update.effective_user
     user_id = str(user.id)
-    username = f"@{user.username}" if user.username else "نەدیار"
     
-    # ئەگەر کۆدا نەهێنی یا تایبەت بنڤێسیت (rayan1328262)
-    if text == "rayan1328262":
-        used_keys = load_data(USED_KEYS_FILE)
-        
-        if user_id in used_keys.get("users", []):
-            await update.message.reply_text("⚠️ تە بەری نوکە ئەڤ کلیلە بکار ئینایە و تنێ ١ جار دهێتە بکارئینان!")
+    if user_id != ADMIN_ID:
+        await start(update, context)
+        return
+
+    pending = load_data(PENDING_GEN_FILE)
+
+    if text == "sinan7757678":
+        pending[user_id] = {"waiting_for_balance": True}
+        save_data(PENDING_GEN_FILE, pending)
+        await update.message.reply_text(
+            "🎛 **سیستەمێ CC Panel چالاک بوو!**\n\n"
+            "💎 تکایە ژمارەیا باڵانسی (کلیلان) بنڤێسە داکو بۆت کلیلا custom بۆ تە دروست کەت:",
+            parse_mode="Markdown"
+        )
+        return
+
+    if user_id in pending and pending[user_id].get("waiting_for_balance"):
+        try:
+            bal_amount = int(text)
+        except ValueError:
+            await update.message.reply_text("❌ تکایە تنێ ژمارەیەکا دروست بۆ باڵانسی بنڤێسە!")
             return
 
-        if "global_used" in used_keys and used_keys["global_used"]:
+        del pending[user_id]
+        save_data(PENDING_GEN_FILE, pending)
+
+        random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        custom_key = f"LEGEND{random_chars}"
+
+        used_keys = load_data(USED_KEYS_FILE)
+        if "custom_keys" not in used_keys:
+            used_keys["custom_keys"] = {}
+        
+        used_keys["custom_keys"][custom_key] = {
+            "balance": bal_amount,
+            "used": False
+        }
+        save_data(USED_KEYS_FILE, used_keys)
+
+        await update.message.reply_text(
+            f"✅ **کلیل ب سەرکەفتن هاتە دروستکرن!**\n\n"
+            f"🔑 کلیلا تە: `{custom_key}`\n"
+            f"💎 بڕا باڵانسا دناڤدا: `{bal_amount} کلیل`\n"
+            f"🔒 ئەڤ کلیلە تنێ ١ جار ژ لایێ هەر کەسەکی ڤە دهێتە بکارئینان.",
+            parse_mode="Markdown"
+        )
+        return
+
+    used_keys = load_data(USED_KEYS_FILE)
+    custom_keys_dict = used_keys.get("custom_keys", {})
+
+    if text in custom_keys_dict:
+        key_data = custom_keys_dict[text]
+        if key_data["used"]:
             await update.message.reply_text("⚠️ ئەڤ کلیلە بەری نوکە هاتیە بکارئینان و اکسپایێر بوویە!")
             return
 
-        # تۆمارکرنا کو کلیل هاتە بکارئینان
-        if "users" not in used_keys:
-            used_keys["users"] = []
-        used_keys["users"].append(user_id)
-        used_keys["global_used"] = True
+        key_data["used"] = True
         save_data(USED_KEYS_FILE, used_keys)
 
-        # دروستکرنا کلیلا نوی ب دەستپێکا LEGEND و 16 پیتان (پیت و ڕاقام تێکەڵ)
-        random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-        custom_generated_key = f"LEGEND{random_chars}" # 6 پیتێن LEGEND + 10 پیت = 16 پیت
-        
-        # بڕا باڵانسا custom (بۆ نموونە 15 کلیل یان هەر بڕەکا تو بڤێی)
-        custom_balance_amount = 15
-        
-        # زێدەکرنا باڵانسی بۆ بەکارهێنەری
+        bal_to_add = key_data["balance"]
+
         balances = load_data(BALANCE_FILE)
         current_bal = balances.get(user_id, 5)
-        balances[user_id] = current_bal + custom_balance_amount
+        balances[user_id] = current_bal + bal_to_add
         save_data(BALANCE_FILE, balances)
 
-        # پەیاما سەرکەفتنێ بۆ بەکارهێنەری ب کوردی بادینی
         await update.message.reply_text(
-            f"🎉 پیرۆزە! کلیلا تە یا تایبەت ب سەرکەفتن هاتە چالاککرن.\n"
-            f"🔑 کلیلا دروستکری: `{custom_generated_key}`\n"
-            f"💎 بڕا باڵانسا نوو یا زێدەبووی: `{custom_balance_amount} کلیل`\n"
-            f"⚠️ هایدار بە: ئەڤ کلیلە اکسپایێر بوو و کەسەک دی ناتوانێ بکار بینیت.",
+            f"🎉 پیرۆزە! کلیلا تە ب سەرکەفتن هاتە فعالکرن.\n"
+            f"💎 بڕا `{bal_to_add} کلیل` بۆ باڵانسا تە هاتە زێدەکرن!\n"
+            f"⚠️ کلیل اکسپایێر بوو.",
             parse_mode="Markdown"
         )
-
-        # هنارتنا پێزانینان بۆ ڕێڤەبەری (دگەل یوزرناڤ، ئایدی و باڵانسا وەرگرتی بەشێ ڤەشارتى)
+        
         admin_msg = (
-            f"🚨 **چالاكبوونا کلیلا نهێنی (Custom Key)!**\n\n"
+            f"🚨 **کلیلەکا CC Panel هاتە بکارئینان!**\n\n"
             f"👤 ناڤ: {user.first_name}\n"
             f"🆔 ئایدی: `{user_id}`\n"
-            f"🔗 یوزرناڤ: {username}\n"
-            f"🔑 کلیلا هاتیە دروستکرن: `{custom_generated_key}`\n"
-            f"💎 باڵانسا بۆ هاتیە زێدەکرن: +{custom_balance_amount}\n"
-            f"🔒 دۆخ: کلیل هاتە بکارئینان و اکسپایێر بوو."
+            f"🔗 یوزرناڤ: @{user.username if user.username else 'نەدیار'}\n"
+            f"💎 باڵانسا بۆ هاتیە زێدەکرن: +{bal_to_add}"
         )
-        
         try:
             await context.bot.send_message(chat_id=ADMIN_ID, text=admin_msg, parse_mode="Markdown")
         except Exception:
@@ -201,89 +208,80 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "menu_reports":
         report_menu = (
-            "🌌 **ناڤەندا کۆنتڕۆلا 1285 ڕاپۆرتێن پێشکەفتی**\n\n"
-            "• هەموو ئامرازێن هێرش و ڕاپۆرتان ب شێوەیەکێ قەوی و خودکار کار دکەن.\n"
-            "• هەر 1 کلیل = 5 کردارێن سەرپێچییێ.\n\n"
-            "👇 پەڕەیا خۆ بژێرە بۆ بینینا لستان:"
+            "🌌 **ناڤەندا کۆنتڕۆلا ڕاپۆرتان (rep_1 هەتا rep_30)**\n\n"
+            "• هەر 1 کلیل چەندین ڕاپۆرتان بەردەوام دەنێرێت.\n"
+            "• یەکێک ژ ڤان مێنۆیان بۆ ئەنجامدانێ بژێرە:\n\n"
+            "👇 ڕاپۆرتا خۆ بژێرە:"
         )
-        report_keyboard = [
-            [InlineKeyboardButton("📄 دەستپێکرنا پەڕەیا 1", callback_data="page_0")],
-            [InlineKeyboardButton("🛒 کڕینا باڵانسی (راستەوخۆ)", url="https://t.me/YUSEEF_SURCHI")],
-            [InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="back_to_start")],
-        ]
-        try:
-            await query.edit_message_text(text=report_menu, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(report_keyboard))
-        except Exception:
-            pass
-
-    elif data.startswith("page_"):
-        page_idx = int(data.replace("page_", ""))
-        items_list = list(MASSIVE_REPORT_TYPES.items())
-        per_page = 10
-        total_pages = (len(items_list) + per_page - 1) // per_page
-        
-        start_idx = page_idx * per_page
-        end_idx = start_idx + per_page
-        current_items = items_list[start_idx:end_idx]
         
         rep_keyboard = []
-        for key_code, (title, emoji) in current_items:
-            rep_keyboard.append([InlineKeyboardButton(f"{emoji} {title}", callback_data=f"execute_{key_code}")])
+        for key_code, (title, emoji) in MASSIVE_REPORT_TYPES.items():
+            rep_keyboard.append([InlineKeyboardButton(f"{emoji} {title} ({key_code})", callback_data=f"autoexec_{key_code}")])
 
-        nav_buttons = []
-        if page_idx > 0:
-            nav_buttons.append(InlineKeyboardButton("⬅️ پێشتر", callback_data=f"page_{page_idx - 1}"))
-        if end_idx < len(items_list):
-            nav_buttons.append(InlineKeyboardButton("دواتر ➡️", callback_data=f"page_{page_idx + 1}"))
-
-        if nav_buttons:
-            rep_keyboard.append(nav_buttons)
-
-        rep_keyboard.append([InlineKeyboardButton("🔙 پاشڤە بۆ مێنۆیا سەرەکی", callback_data="menu_reports")])
+        rep_keyboard.append([InlineKeyboardButton("🛒 کڕینا باڵانسی (راستەوخۆ)", url="https://t.me/YUSEEF_SURCHI")])
+        rep_keyboard.append([InlineKeyboardButton("🔙 پاشڤە (دەستپێکێ)", callback_data="back_to_start")])
 
         try:
-            await query.edit_message_text(
-                text=f"⚡ **لستا فەرمیا ڕاپۆرتان (پەڕە {page_idx + 1} ژ {total_pages}):**\nبۆ دیتنا زێدەتر کلیکا دوگمەیێن خوارێ بکە:",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(rep_keyboard),
-            )
+            await query.edit_message_text(text=report_menu, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(rep_keyboard))
         except Exception:
             pass
 
-    elif data.startswith("execute_"):
-        rep_key = data.replace("execute_", "")
+    elif data.startswith("autoexec_"):
+        rep_key = data.replace("autoexec_", "")
         report_name, emoji = MASSIVE_REPORT_TYPES.get(rep_key, ("تشتێ خراب", "⚠️"))
-        
+
+        balances = load_data(BALANCE_FILE)
+        current_bal = balances.get(user_id, 5)
+
+        if current_bal <= 0:
+            try:
+                await context.bot.answer_callback_query(
+                    callback_query_id=query.id,
+                    text="⚠️ باڵانسا تە نینە! تکایە کلیلان بکڕە یان دیارییا خۆ وەرگرە.",
+                    show_alert=True
+                )
+            except Exception:
+                pass
+            return
+
+        balances[user_id] = current_bal - 1
+        save_data(BALANCE_FILE, balances)
+
         histories = load_data(HISTORY_FILE)
         if user_id not in histories:
             histories[user_id] = []
-        
+
         current_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        histories[user_id].insert(0, {
-            "name": f"{emoji} {report_name}",
-            "time": current_time_str
-        })
-        histories[user_id] = histories[user_id][:10]
+        
+        reports_to_send = min(current_bal, 5)
+        for r_i in range(1, reports_to_send + 1):
+            histories[user_id].insert(0, {
+                "name": f"{emoji} [{rep_key}] {report_name} (Auto Batch {r_i})",
+                "time": current_time_str
+            })
+        
+        histories[user_id] = histories[user_id][:30]
         save_data(HISTORY_FILE, histories)
 
         try:
             await context.bot.answer_callback_query(
                 callback_query_id=query.id,
-                text=f"{emoji} سەرکەفتن! داخوازییا ڕاپۆرتێ بۆ ({report_name}) ب سەرکەفتن هاتە هنارتن.",
+                text=f"⚡ سەرکەفتن! سیستەمێ ئوتۆماتیکی {reports_to_send} ڕاپۆرت بۆ ({rep_key}) هنارت.",
                 show_alert=True
             )
         except Exception:
             pass
+        await start(update, context)
 
     elif data == "report_history":
         histories = load_data(HISTORY_FILE)
         user_history = histories.get(user_id, [])
 
         if not user_history:
-            hist_text = "📜 **سەنتەرێ ڕێپۆرتان (مێژوو):**\n\nتە هێشتا هیچ ڕێپۆرتەک نەنارتیە!"
+            hist_text = "📜 **مێژووا ڕاپۆرتان:**\n\nتە هێشتا هیچ ڕێپۆرتەک نەنارتیە!"
         else:
-            hist_text = "📜 **دوماهیک ڕێپۆرتێن تە هنارتین دگەل دەمی:**\n\n"
-            for idx, h in enumerate(user_history, 1):
+            hist_text = "📜 **دوماهیک ڕێپۆرتێن خودکار هنارتین:**\n\n"
+            for idx, h in enumerate(user_history[:30], 1):
                 hist_text += f"{idx}. {h['name']}\n   ⏱ کات: `{h['time']}`\n\n"
 
         hist_keyboard = [
@@ -299,17 +297,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_time = time.time()
         last_claim = cooldowns.get(user_id, 0)
         
-        cooldown_time = 5 * 3600
+        cooldown_time = 24 * 3600
         
         if current_time - last_claim < cooldown_time:
             remaining_sec = int(cooldown_time - (current_time - last_claim))
             rem_hours = remaining_sec // 3600
             rem_mins = (remaining_sec % 3600) // 60
-            rem_secs = remaining_sec % 60
             try:
                 await context.bot.answer_callback_query(
                     callback_query_id=query.id,
-                    text=f"⚠️ هێشتا دەمێ وەرگرتنی نەهاتیە!\n⏳ ماوەیێ مایی: {rem_hours} دەمژمێر، {rem_mins} خولەک و {rem_secs} چرکە.",
+                    text=f"⚠️ هێشتا دەمێ وەرگرتنی نەهاتیە!\n⏳ ماوەیێ مایی: {rem_hours} دەمژمێر و {rem_mins} خولەک.",
                     show_alert=True
                 )
             except Exception:
@@ -318,7 +315,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         balances = load_data(BALANCE_FILE)
         current_bal = balances.get(user_id, 5)
-        balances[user_id] = current_bal + 5
+        balances[user_id] = current_bal + 10
         save_data(BALANCE_FILE, balances)
 
         cooldowns[user_id] = current_time
@@ -327,7 +324,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.answer_callback_query(
                 callback_query_id=query.id,
-                text="🎁 پیرۆزە! 5 کلیلێن بەلاش ب سەرکەفتن هاتنە زێدەکرن بۆ پڕۆفایلا تە.",
+                text="🎁 پیرۆزە! 10 کلیلێن بەلاش بۆ ماوەیا 24 دەمژمێران هاتنە زێدەکرن.",
                 show_alert=True
             )
         except Exception:
@@ -339,10 +336,9 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
-    # هاندەرێ پەیامان بۆ پشکنینا کلیلێن نهێنی و دروستکرنا custom keys
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_secret_key))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_cc_panel))
 
-    print("سیستەمێ کلیلێن تایبەت و ڕاپۆرتان ب سەرکەفتن دەست بە کار بوو...")
+    print("سیستەمێ rep_1 بۆ rep_30 و CC Panel ب سەرکەفتن دەست بە کار بوو...")
     app.run_polling()
 
 if __name__ == "__main__":

@@ -75,8 +75,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = f"@{user.username}" if user.username else "نەدیار"
     name = user.first_name
 
+    # پشکپێکرنا باڵانسی: ئەگەر کەسەک بۆ جارەکا ئێکشەم بێتە ناو بۆتی، 5 کلیلێن دەستپێکێ ب خۆکار ددەینێ
     balances = load_data(BALANCE_FILE)
-    balance = balances.get(user_id, 0)
+    if user_id not in balances:
+        balances[user_id] = 5  # 5 کلیلێن بەلاش یێن دەستپێکێ
+        save_data(BALANCE_FILE, balances)
+
+    balance = balances.get(user_id, 5)
 
     profile_text = (
         f"╔══════════════════════╗\n"
@@ -96,6 +101,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("📊 سيستەمێ 1285 ڕاپۆرتان", callback_data="menu_reports"),
             InlineKeyboardButton("📜 سەنتەری ڕێپۆرتان (مێژوو)", callback_data="report_history"),
         ],
+        [InlineKeyboardButton("🔄 نووژەنکرنا پڕۆفایلی (Refresh)", callback_data="refresh_profile")],
         [InlineKeyboardButton("🛒 کڕینا کلیلان (تەماس)", url="https://t.me/YUSEEF_SURCHI")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -104,7 +110,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(profile_text, parse_mode="Markdown", reply_markup=reply_markup)
     elif update.callback_query:
         query = update.callback_query
-        await query.answer()
+        await query.answer("🔄 پڕۆفایل ب سەرکەفتن هاتە نووژەنکرن!")
         try:
             await query.edit_message_text(text=profile_text, parse_mode="Markdown", reply_markup=reply_markup)
         except Exception:
@@ -117,7 +123,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     user_id = str(query.from_user.id)
 
-    if data == "back_to_start":
+    if data == "back_to_start" or data == "refresh_profile":
         await start(update, context)
 
     elif data == "menu_reports":
@@ -230,7 +236,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         balances = load_data(BALANCE_FILE)
-        current_bal = balances.get(user_id, 0)
+        current_bal = balances.get(user_id, 5)
         balances[user_id] = current_bal + 5
         save_data(BALANCE_FILE, balances)
 

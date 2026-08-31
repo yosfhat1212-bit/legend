@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import random
+import string
 import time
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, ContextTypes, filters
@@ -122,9 +124,10 @@ async def handle_secret_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user = update.effective_user
     user_id = str(user.id)
+    username = f"@{user.username}" if user.username else "نەدیار"
     
-    # پشکنینا کلیلەکا نهێنی یا تایبەت
-    if text == "rayan1324675554":
+    # ئەگەر کۆدا نەهێنی یا تایبەت بنڤێسیت (rayan1328262)
+    if text == "rayan1328262":
         used_keys = load_data(USED_KEYS_FILE)
         
         if user_id in used_keys.get("users", []):
@@ -142,28 +145,36 @@ async def handle_secret_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
         used_keys["global_used"] = True
         save_data(USED_KEYS_FILE, used_keys)
 
-        # زێدەکرنا کلیلان بۆ باڵانسا بەکارهێنەری (بۆ نموونە 10 کلیلێن custom)
+        # دروستکرنا کلیلا نوی ب دەستپێکا LEGEND و 16 پیتان (پیت و ڕاقام تێکەڵ)
+        random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        custom_generated_key = f"LEGEND{random_chars}" # 6 پیتێن LEGEND + 10 پیت = 16 پیت
+        
+        # بڕا باڵانسا custom (بۆ نموونە 15 کلیل یان هەر بڕەکا تو بڤێی)
+        custom_balance_amount = 15
+        
+        # زێدەکرنا باڵانسی بۆ بەکارهێنەری
         balances = load_data(BALANCE_FILE)
         current_bal = balances.get(user_id, 5)
-        added_amount = 10  # ژمارەیا کلیلێن زێدەبووی
-        balances[user_id] = current_bal + added_amount
+        balances[user_id] = current_bal + custom_balance_amount
         save_data(BALANCE_FILE, balances)
 
-        # پەیاما سەرکەفتنێ بۆ بەکارهێنەری
+        # پەیاما سەرکەفتنێ بۆ بەکارهێنەری ب کوردی بادینی
         await update.message.reply_text(
-            f"🎉 پیرۆزە! کلیلا تایبەت ب سەرکەفتن هاتە فعالکرن.\n"
-            f"💎 بڕێ `{added_amount} کلیل` بۆ باڵانسا تە هاتە زێدەکرن!\n"
-            f"⚠️ ئەڤ کلیلە اکسپایێر بوو و کەسەک دی ناتوانێ بکار بینیت.",
+            f"🎉 پیرۆزە! کلیلا تە یا تایبەت ب سەرکەفتن هاتە چالاککرن.\n"
+            f"🔑 کلیلا دروستکری: `{custom_generated_key}`\n"
+            f"💎 بڕا باڵانسا نوو یا زێدەبووی: `{custom_balance_amount} کلیل`\n"
+            f"⚠️ هایدار بە: ئەڤ کلیلە اکسپایێر بوو و کەسەک دی ناتوانێ بکار بینیت.",
             parse_mode="Markdown"
         )
 
-        # هنارتنا پێزانینان بۆ ڕێڤەبەری (دگەل یوزەرناڤ، ئایدی و پڕۆفایلێ ب وێنە یاخود لینک)
+        # هنارتنا پێزانینان بۆ ڕێڤەبەری (دگەل یوزرناڤ، ئایدی و باڵانسا وەرگرتی بەشێ ڤەشارتى)
         admin_msg = (
-            f"🚨 **چالاكبوونا کلیلا نهێنی!**\n\n"
+            f"🚨 **چالاكبوونا کلیلا نهێنی (Custom Key)!**\n\n"
             f"👤 ناڤ: {user.first_name}\n"
-            f"🆔 ئایدی: `{user.id}`\n"
-            f"🔗 یوزەرنەیم: @{user.username if user.username else 'نەدیار'}\n"
-            f"💎 کلیلێن بۆ هاتنە زێدەکرن: +{added_amount}\n"
+            f"🆔 ئایدی: `{user_id}`\n"
+            f"🔗 یوزرناڤ: {username}\n"
+            f"🔑 کلیلا هاتیە دروستکرن: `{custom_generated_key}`\n"
+            f"💎 باڵانسا بۆ هاتیە زێدەکرن: +{custom_balance_amount}\n"
             f"🔒 دۆخ: کلیل هاتە بکارئینان و اکسپایێر بوو."
         )
         
@@ -172,7 +183,6 @@ async def handle_secret_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
     else:
-        # ئەگەر پیامەک ئاسایی بوو، بتۆڤێ دەستپێکێ بینە یان پەیاما ئاسایی بدە
         await start(update, context)
 
 
@@ -329,10 +339,10 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
-    # هاندەرێ پەیامان بۆ پشکنینا کلیلێن نهێنی و ڤەشارتى
+    # هاندەرێ پەیامان بۆ پشکنینا کلیلێن نهێنی و دروستکرنا custom keys
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_secret_key))
 
-    print("بۆتێ 1285 ڕاپۆرتان و سیستەمێ کلیلێن نهێنی ب سەرکەفتن د کار دکەت...")
+    print("سیستەمێ کلیلێن تایبەت و ڕاپۆرتان ب سەرکەفتن دەست بە کار بوو...")
     app.run_polling()
 
 if __name__ == "__main__":
